@@ -1,17 +1,16 @@
 "use client";
-import prisma from "@/lib/prismaSingleton";
 import { useSession } from "next-auth/react";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import { json } from "stream/consumers";
+
 
 const P2Page = () => {
-  const { register, handleSubmit } = useForm();
+  const { register, handleSubmit,reset } = useForm();
 
   const data = useSession();
   //@ts-ignore
-  const userId: string = data?.data?.user?.id;
-  console.log(userId);
+  const email: string = data?.data?.user?.email;
+  
   const onSubmit = async (data: any) => {
     const response = await fetch("/api/p2p", {
       method: "POST",
@@ -19,7 +18,7 @@ const P2Page = () => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        userId: data.sendFrom,
+        from: data.sendFrom,
         to: data.sendTo,
         amount: Number(data.amount),
       }),
@@ -28,43 +27,53 @@ const P2Page = () => {
     console.log(result);
     if (response.ok) {
       console.log("success");
+      reset()
     }
   };
   return (
-    <div>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div>
-          <label>From</label>
-          <input
+    <div className="w-full" >
+    <div className="w-[30vw] px-10 py-10">
+    <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="flex flex-col gap-4  justify-center ">
+        <div className="flex justify-between">
+          <label className="text-lg font-semibold">From</label>
+          <input 
             {...register("sendFrom", {
               required: "this field is required",
             })}
             type="text"
-            defaultValue={userId}
+            className="outline-none px-2 py-2"
+            defaultValue={email}
           />
         </div>
-        <div>
-          <label>To</label>
+        <div className="flex justify-between">
+          <label className="text-lg font-semibold">To</label>
           <input
             {...register("sendTo", {
               required: "this field is required",
             })}
             type="email"
+            className="outline-none px-2 py-2"
           />
         </div>
-        <div>
-          <label>Amount</label>
+        <div className="flex justify-between">
+          <label className="text-lg font-semibold">Amount</label>
           <input
             {...register("amount", {
               required: "this field is required",
             })}
             type="number"
+            className="outline-none px-2 py-2"
           />
         </div>
-        <button type="submit" className="bg-blue-500">
+        <div className="flex justify-center">
+        <button  type="submit" className="bg-blue-500 px-4 py-2 text-white hover:bg-blue-400 border rounded-xl">
           Send Money
         </button>
+        </div>
+        </div>
       </form>
+    </div>
     </div>
   );
 };

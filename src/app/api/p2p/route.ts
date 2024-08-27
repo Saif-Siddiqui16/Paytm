@@ -1,7 +1,38 @@
 import prisma from "@/lib/prismaSingleton";
 
 export const POST = async (req: Request) => {
-  const { userId, to, amount } = await req.json();
+  const { from, to, amount } = await req.json();
+
+  /* const mId = await prisma.merchant.findFirst({
+    where: {
+      email: to,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!mId) {
+    return new Response(JSON.stringify({ message: "Merchant not found" }), { status: 404 });
+  }
+
+  const merchId = mId.id;
+
+  const uId = await prisma.user.findFirst({
+    where: {
+      email: from,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!uId) {
+    return new Response(JSON.stringify({ message: "User not found" }), { status: 404 });
+  }
+
+  const userId = uId.id; */
+
   try {
     const mId = await prisma.merchant.findFirst({
       where: {
@@ -11,61 +42,91 @@ export const POST = async (req: Request) => {
         id: true,
       },
     });
+
     if (!mId) {
-      return;
+      return new Response(JSON.stringify({ message: "Merchant not found" }), { status: 404 });
+    }
+
+    const merchId = mId.id;
+
+
+    const uId = await prisma.user.findFirst({
+      where: {
+        email: from,
+      },
+      select: {
+        id: true,
+      },
+    });
+  
+    if (!uId) {
+      return new Response(JSON.stringify({ message: "User not found" }), { status: 404 });
     }
   
-    const paymentDone = await prisma.$transaction(
-      async (tx) => {
-        await tx.$queryRaw`SELECT * FROM "UserAccount" WHERE "userId"=${userId} FOR UPDATE`;
-        const userAccount = await tx.userAccount.findFirst({
-          where: {
-            userId: userId,
-          },
-        });
-        console.log(userAccount);
-        if ((userAccount?.balance || 0) < amount) {
-          return;
-        }
-       
-        const merchantAccount = await tx.merchantAccount.findFirst({
-          where: {
-            //@ts-ignore
-            merchantId: mId.id,
-          },
-        });
-        
-      
-    
-        await tx.userAccount.update({
-          where:{
-            userId:userId
-          },
-          data:{
-            balance:{
-              increment:10
-            }
-          }
-        })
-        console.log(userAccount?.balance)
-       
-        return true
-      },{
-        maxWait: 5000,
-        timeout: 100000,
+    const userId = uId.id;
+
+    // Start the transaction
+    const paymentDone = await prisma.$transaction(async (tx) => {
+      // Lock the row with FOR UPDATE
+      const userAcc = await tx.$queryRaw`SELECT * FROM "UserAccount" WHERE "userId" = ${userId} FOR UPDATE`;
+
+      // Check if user account exists
+      if (!userAcc) {
+        throw new Error("User account not found");
       }
-    );
-    if(paymentDone){
-      return Response.json({
-        message:"successful"
+
+      // Find user account
+      const userAccount = await tx.userAccount.findFirst({
+        where: {
+          userId,
+        },
+      });
+
+      // Find merchant account
+      const merchantAccount = await tx.merchantAccount.findFirst({
+        where: {
+          merchantId: merchId,
+        },
+      });
+
+      if (!userAccount || !merchantAccount) {
+        throw new Error("User or Merchant account not found");
+      }
+
+      // Validate the amount
+      if (typeof amount !== 'number' || amount <= 0) {
+        throw new Error("Invalid amount");
+      }
+
+      // Perform the update
+       await tx.userAccount.update({
+        where: {
+          userId,
+        },
+        data: {
+          balance: {
+            decrement: amount, // Corrected to decrement by `amount`
+          },
+        },
+      });
+      await tx.merchantAccount.update({
+        where:{
+          merchantId:merchId
+        },
+        data:{
+          balance:{
+            increment:amount
+          }
+        }
       })
-    }
-    else{
-      return Response.json({
-        message:"not"
-      })
-    }
-  } catch (error) {
-    return Response.json(error)
+
+      return true;
+    });
+
+    return new Response(JSON.stringify({ paymentDone }), { status: 200 });
+
+  } catch (error:any) {
+    console.error("Error processing payment:", error);
+    return new Response(JSON.stringify({ message: error.message }), { status: 500 });
   }
 };

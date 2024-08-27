@@ -110,11 +110,11 @@ router.push("/dashboard")
             </button>
             {type ==="register"? (
               <div>
-                <label>Already registered Please : <span><Link href="/login">Login</Link></span></label>
+                <label>Already registered Please : <span className="text-blue-700"><Link href="/login">Login</Link></span></label>
               </div>
             ):(
               <div>
- <label>Not registered : <span><Link href="/register">Register</Link></span></label>
+ <label>Not registered : <span className="text-blue-700"><Link href="/register">Register</Link></span></label>
               </div>
             )
 
