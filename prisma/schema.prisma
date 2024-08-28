@@ -19,6 +19,7 @@ model User{
   email String @unique
   password String
   account UserAccount?
+  transactions OnRampTransactions[]
 }
 
 model Merchant{
@@ -27,6 +28,7 @@ model Merchant{
   email String @unique
   password String
   account MerchantAccount?
+  onramptransaction OnRampTransactions[]
   
 }
 
@@ -44,4 +46,19 @@ model MerchantAccount {
   locked     Int    @default(0)
   merchantId String @unique
   merchant   Merchant @relation(fields: [merchantId], references: [id])
+}
+
+model OnRampTransactions{
+id String @id @default(uuid())
+amount Int @default(0)
+from String 
+to String
+status Status
+merchant Merchant? @relation(fields: [to],references: [email])
+user User? @relation(fields: [from],references: [email])
+}
+
+enum Status{
+  SUCCESS
+  FAIL
 }

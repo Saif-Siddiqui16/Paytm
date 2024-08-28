@@ -40,6 +40,7 @@ export const POST = async (req: Request) => {
       },
       select: {
         id: true,
+        email:true
       },
     });
 
@@ -56,6 +57,7 @@ export const POST = async (req: Request) => {
       },
       select: {
         id: true,
+        email:true,
       },
     });
   
@@ -122,6 +124,16 @@ export const POST = async (req: Request) => {
 
       return true;
     });
+    if(paymentDone){
+      await prisma.onRampTransactions.create({
+        data:{
+          status:"SUCCESS",
+          amount,
+          from:uId.email,
+          to:mId.email,
+        }
+      })
+    }
 
     return new Response(JSON.stringify({ paymentDone }), { status: 200 });
 
